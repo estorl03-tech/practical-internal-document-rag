@@ -1,207 +1,216 @@
-# Practical RAG Prototype
+# 実務向け社内文書検索 RAG プロトタイプ
 
-Enterprise-oriented RAG prototype for internal knowledge search.
+社内ナレッジ検索を想定した、実務寄りの RAG プロトタイプです。
 
-> This repository is a local portfolio prototype, not a production-ready service.
-> Do not commit real API keys, internal company documents, or sensitive business data.
+> このリポジトリは、ローカルで動かすポートフォリオ用プロトタイプであり、本番運用向けサービスではありません。  
+> 実在の API キー、社内文書、個人情報、業務上の機密データはコミットしないでください。
 
-## Portfolio Summary
+## ポートフォリオ概要
 
-This project is a backend-focused RAG prototype built to address the gap between a simple demo and something closer to real internal knowledge operations.
+このプロジェクトは、単なる RAG デモから一歩進んで、社内文書検索の実務課題に近い論点を扱うために作った backend 主体のプロトタイプです。
 
-Problems this prototype focuses on:
+このプロトタイプが主に向き合っている課題:
 
-- Search is not enough if answers cannot show evidence
-- Old and new versions of the same document should not be mixed
-- Inactive documents should stay managed without staying searchable
-- Restricted documents should not leak into retrieval or answers
-- Answering should fail safely when evidence is weak
+- 根拠を示せない回答は、検索できても実務では使いにくい
+- 同じ文書の旧版と新版が混ざると危険
+- inactive な文書は管理対象として残しつつ、検索対象には含めたくない
+- 権限外文書が retrieval や回答に混ざるのは危ない
+- 根拠が弱いときは、安全側で回答を止めたい
 
-What is implemented:
+実装済みのもの:
 
-- Hybrid retrieval with query rewrite and reranking
-- Evidence-first answering with `green / yellow / red` safety signals
-- Document lifecycle management: create, inspect, update, deactivate
-- Metadata-aware retrieval using `version`, `updated_at`, and `document_group`
-- Minimal ACL using `access_level` and `user_role`
-- Regression coverage for retrieval, answer behavior, document updates, and access control
+- query rewrite と rerank を含むハイブリッド検索
+- `green / yellow / red` による根拠ベースの回答制御
+- 文書ライフサイクル管理: 登録 / 参照 / 更新 / inactive 化 / 削除
+- `version`、`updated_at`、`document_group` を使ったメタデータ考慮 retrieval
+- `access_level` と `user_role` による最小 ACL
+- retrieval / 回答挙動 / 文書更新 / アクセス制御に対する回帰テスト
 
-What this project is meant to demonstrate:
+このプロジェクトで見せたいこと:
 
-- Understanding of practical RAG failure modes
-- Ability to separate retrieval, answer generation, document management, and evaluation concerns
-- Ability to move from manual QA to automated regression checks
-- Ability to add operational concepts like versioning and access control without overcomplicating the first implementation
+- 実務で起きやすい RAG の失敗パターンを理解していること
+- retrieval、回答生成、文書管理、評価を責務分離できること
+- 手動 QA から自動回帰確認へ寄せられること
+- 版管理やアクセス制御のような運用概念を、最初の実装で過剰に複雑化せずに入れられること
 
-In other words, this repository is best understood as a prototype that has started to solve the core operational problems of internal-document RAG, rather than a finished production system.
+つまりこのリポジトリは、完成した本番システムというより、**社内文書検索 RAG の実務課題のコア部分を解き始めているプロトタイプ** と捉えるのがいちばん正確です。
 
-It directly addresses common real-world problems such as:
+特に、現実の業務でよく問題になる次の点には直接触れています。
 
-- unsupported answers that still sound confident
-- mixing old and new versions of the same policy
-- accidentally retrieving inactive documents
-- leaking restricted documents into retrieval or answers
-- relying on manual QA that cannot be replayed
+- 根拠が弱いのにもっともらしく答えてしまう
+- 同じ規程の旧版と新版が混ざる
+- inactive 文書を誤って拾う
+- 権限外文書が retrieval や回答に混ざる
+- 会話ベースの手動 QA に依存して再現できない
 
-What it does **not** fully solve yet:
+まだ本番レベルでは未解決の課題:
 
-- real authentication and identity-linked authorization
-- richer ACL models for teams, projects, and individual users
-- audit logging and operational accountability
-- robust ingestion quality across messy PDFs and other file formats
-- retrieval quality validation on larger document collections
+- 本物の認証と ID 連動の認可
+- チーム / プロジェクト / 個人レベルまで含む多段 ACL
+- 監査ログと運用トレーサビリティ
+- 崩れた PDF や他形式文書を含む取り込み品質
+- 中規模以上の文書群に対する retrieval 品質評価
 
-## Current Status
+## 現在の到達点
 
-- **Backend**
-  Retrieval, answer generation, document management, active/inactive control, latest-version preference, minimal ACL, PDF upload, and delete API are implemented.
-- **UI**
-  The `/demo` page shows search, answer review, ACL differences, PDF upload, and `green / yellow / red` safety behavior in a single screen.
-- **Quality**
-  Retrieval, answer behavior, access control, document updates, PDF upload, and delete behavior are covered by regression tests.
-- **Docs**
-  README, architecture notes, and QA notes explain what is implemented now, what is intentionally minimal, and what would be company-specific in a real deployment.
+- **Backend**  
+  retrieval、回答生成、文書管理、active / inactive 制御、最新版優先、最小 ACL、PDF upload、delete API まで実装済みです。
+- **UI**  
+  `/demo` で、検索、回答確認、ACL の差、PDF 取り込み、`green / yellow / red` の挙動を 1 画面で確認できます。
+- **Quality**  
+  retrieval、回答挙動、アクセス制御、文書更新、PDF upload、delete の挙動を回帰テストで確認しています。
+- **Docs**  
+  README、アーキテクチャ説明、QA メモで、「何を実装したか」「どこを意図的に最小にしているか」「本番では何が会社依存か」を説明しています。
 
-## Demo UI
+## デモ UI
 
-Open `http://127.0.0.1:8000/demo` to try the portfolio UI.
+ポートフォリオ用 UI は `http://127.0.0.1:8000/demo` で確認できます。
 
-The demo is designed to make three behaviors easy to see:
+このデモでは、次の 3 つの挙動が見やすいようにしています。
 
-1. `一般社員 -> red`
-   A restricted or weakly-grounded question should stop safely instead of producing a confident-looking answer.
-2. `人事 -> green`
-   The same question can be answered once the viewer has access to the relevant HR document.
-3. `PDF upload -> yellow`
-   A newly uploaded PDF can be used immediately, while still responding cautiously when evidence is usable but not yet strong enough for a full `green`.
+1. `一般社員 -> red`  
+   権限外、または根拠が弱い質問に対しては、もっともらしく答えず安全に停止します。
+2. `人事 -> green`  
+   同じ質問でも、人事ロールなら人事向け文書を使って回答できます。
+3. `PDF upload -> yellow`  
+   新しくアップロードした PDF をすぐ検索対象にしつつ、根拠が十分でなければ慎重に回答します。
 
-Recommended screenshot set for the portfolio:
+ポートフォリオで載せるスクリーンショット例:
 
-- `一般社員` asking `人事評価資料はどこで確認できますか？`
-  This shows safe refusal, no leaked evidence, and the fallback behavior for `red`.
-- `人事` asking the same question
-  This shows ACL-based retrieval, answer generation, and `used_source_summaries` with the relevant HR document.
-- A PDF upload followed by `テレワークの申請はどこから行いますか？`
-  This shows ingestion, retrieval from uploaded content, and a cautious `yellow` answer based on extracted evidence.
+- `一般社員` が `人事評価資料はどこで確認できますか？` と質問
+  - `red` による安全停止
+  - 権限外文書が混ざらないこと
+  - fallback 挙動
+- `人事` が同じ質問
+  - ACL ベースの retrieval
+  - 根拠付き回答
+  - `used_source_summaries`
+- PDF upload 後に `テレワークの申請はどこから行いますか？`
+  - 取り込み
+  - upload 後の retrieval
+  - `yellow` の慎重回答
 
-### Screenshot: `一般社員 -> red`
+### スクリーンショット: `一般社員 -> red`
 
-一般社員では権限外の質問に十分な根拠を集められず、回答を停止する例です。
+一般社員では、十分な根拠を集められない質問に対して回答を停止する例です。
 
 ![一般社員での安全停止](docs/images/demo-red.png)
 
-### Screenshot: `人事 -> green`
+### スクリーンショット: `人事 -> green`
 
-人事ロールでは人事向け文書にアクセスできるため、同じ質問でも根拠付きで回答できる例です。
+人事ロールでは人事向け文書にアクセスできるため、同じ質問でも根拠付きで回答できます。
 
 ![人事ロールでの根拠付き回答](docs/images/demo-green.png)
 
-### Screenshot: `PDF upload -> yellow`
+### スクリーンショット: `PDF upload -> yellow`
 
-PDF をアップロードして検索対象に追加し、根拠強度に応じて慎重に回答する例です。
+PDF をアップロードして検索対象に追加し、根拠の強さに応じて慎重に回答する例です。
 
 ![PDFアップロード後の慎重回答](docs/images/demo-yellow.png)
 
-## What This Project Covers
+## このプロジェクトがカバーする範囲
 
-- Document ingestion
-- Paragraph-first chunking
-- Embedding generation with OpenAI
-- Vector search with Postgres + pgvector
-- Answer generation with retrieved context
-- Source-aware responses
-- Document metadata management
-- Active/inactive document control
+- 文書取り込み
+- 段落寄りの chunking
+- OpenAI を使った embedding 生成
+- Postgres + pgvector によるベクトル検索
+- retrieval 結果を使った回答生成
+- 出典を意識したレスポンス
+- 文書メタデータ管理
+- active / inactive 文書制御
 
-## Architecture Overview
+## アーキテクチャ概要
 
-Core backend flow:
+主な backend の流れ:
 
-1. Documents are stored with metadata such as `version`, `is_active`, `document_group`, and `access_level`
-2. Document content is chunked and embedded for retrieval
-3. `/search` applies active filtering, ACL filtering, latest-version preference, hybrid scoring, and reranking
-4. `/ask` reuses the same retrieval pipeline and only answers from retrieved evidence
-5. Answer behavior is controlled through `green / yellow / red` thresholds rather than a single binary rule
+1. 文書は `version`、`is_active`、`document_group`、`access_level` などのメタデータ付きで保存される
+2. 文書本文は chunk 化され、retrieval 用 embedding が作られる
+3. `/search` では active filter、ACL filter、最新版優先、hybrid score、rerank を順に適用する
+4. `/ask` は同じ retrieval pipeline を使い、取得できた根拠からだけ回答する
+5. 回答挙動は 2 値ではなく `green / yellow / red` で制御する
 
-Important design choices:
+重要な設計判断:
 
-- `document_group` keeps multiple versions of the same document series related
-- `updated_at` is the primary latest-version signal, with `version` as a tie-breaker
-- `access_level` is intentionally minimal to show the ACL concept without hard-coding company-specific auth
-- `used_sources` and `used_source_summaries` separate raw retrieval candidates from the evidence actually used in the answer
+- `document_group` で同系列文書の複数版を束ねる
+- 最新版判定は `updated_at` を主軸にし、`version` は tie-break として使う
+- `access_level` は会社依存の本格 auth を作り込まず、ACL の概念だけ見せる最小実装にしている
+- `used_sources` と `used_source_summaries` により、retrieval 候補と実際に回答へ使った根拠を分けている
 
-## Quick Start
+## クイックスタート
 
-### 1. Start the database
+### 1. DB を起動
 
 ```powershell
 docker compose up -d
 ```
 
-### 2. Set your API key in the current terminal
+### 2. 現在のターミナルに API キーを設定
 
 ```powershell
 $env:OPENAI_API_KEY="sk-..."
 ```
 
-The API key should be set only in your local shell or local environment file and must not be committed to Git.
+API キーはローカルシェルやローカル環境ファイルでのみ扱い、Git には含めないでください。
 
-### 3. Start the API server
+### 3. API サーバーを起動
 
 ```powershell
 uv run uvicorn app.main:app --reload
 ```
 
-### 4. Open the API docs
+### 4. API ドキュメントを開く
 
 - `http://127.0.0.1:8000/docs`
 
-## Main Endpoints
+## 主なエンドポイント
 
-### System
+### システム
+
 - `GET /health`
 - `GET /db-health`
 
-### Document Management
+### 文書管理
 
-Use these endpoints to register, inspect, update, and deactivate documents while keeping chunked retrieval data in sync.
+文書を登録・参照・更新・inactive 化しつつ、chunk 化された retrieval データとの整合も保つためのエンドポイントです。
 
 - `POST /documents`
 - `GET /documents`
 - `GET /documents/{document_id}`
 - `PATCH /documents/{document_id}`
 - `PATCH /documents/{document_id}/active`
+- `DELETE /documents/{document_id}`
 - `GET /documents/{document_id}/chunks`
+- `POST /documents/upload/pdf`
 
 ### Retrieval
 
 - `POST /search`
 
-### Answering
+### 回答
 
 - `POST /ask`
 
-## Document Metadata Policy
+## 文書メタデータ方針
 
-Each document now carries the following metadata.
+各文書は次のメタデータを持ちます。
 
-- `version`: simple document version label such as `v1`
-- `is_active`: whether the document should be used for current retrieval and answering
-- `document_group`: groups multiple versions of the same document series
-- `access_level`: simple access control label such as `public` or `hr`
-- `created_at`: when the document was first registered
-- `updated_at`: when the document metadata was last updated
+- `version`: `v1` のようなシンプルな版ラベル
+- `is_active`: 現在の retrieval / 回答対象に含めるか
+- `document_group`: 同系列文書の複数版をまとめるキー
+- `access_level`: `public` や `hr` のような簡易アクセスラベル
+- `created_at`: 初回登録日時
+- `updated_at`: メタデータ更新日時
 
-### Document update behavior
+### 文書更新の挙動
 
-- `PATCH /documents/{document_id}` can update `title`, `source`, `content`, `version`, `is_active`, `document_group`, and `access_level`
-- If `title`, `source`, or `content` changes, the document chunks are rebuilt
-- Rebuilt chunks are re-embedded using the latest `title + chunk content` retrieval text
-- This makes `updated_at` meaningful for actual content evolution, not just active-flag changes
+- `PATCH /documents/{document_id}` で `title`、`source`、`content`、`version`、`is_active`、`document_group`、`access_level` を更新できます
+- `title`、`source`、`content` が変わると chunk を再構築します
+- 再構築した chunk は、最新の `title + chunk content` を使って再 embedding します
+- これにより `updated_at` が active フラグ変更だけでなく、実際の内容更新を反映する値として意味を持ちます
 
-#### Example: update an existing document
+#### 例: 既存文書を更新する
 
-Request:
+リクエスト:
 
 ```json
 {
@@ -215,26 +224,26 @@ Request:
 }
 ```
 
-Use with:
+使用先:
 
 ```powershell
 PATCH /documents/1
 ```
 
-### Active / inactive behavior
+### active / inactive の挙動
 
-- Inactive documents remain visible in `GET /documents`
-- Inactive documents are excluded from `POST /search`
-- Inactive documents are also excluded from `POST /ask` because answering uses the same retrieval pipeline
+- inactive 文書は `GET /documents` では見える
+- inactive 文書は `POST /search` から除外される
+- `POST /ask` も同じ retrieval pipeline を使うため、inactive 文書は回答にも使われない
 
-### Access control behavior
+### アクセス制御の挙動
 
-- Documents are registered with an `access_level`
-- `public` documents are visible to every `user_role`
-- Non-public documents are visible only when `user_role` matches `access_level`
-- `POST /search` and `POST /ask` accept `user_role` and apply the same access filter before retrieval
+- 文書は `access_level` 付きで登録される
+- `public` 文書はすべての `user_role` から見える
+- 非公開文書は、`user_role` が `access_level` と一致するときだけ見える
+- `POST /search` と `POST /ask` は `user_role` を受け取り、retrieval 前に同じアクセスフィルタを適用する
 
-#### Example: search as a specific role
+#### 例: 特定ロールで検索する
 
 ```json
 {
@@ -244,63 +253,63 @@ PATCH /documents/1
 }
 ```
 
-### Answer safety signals
+### 回答の安全制御
 
-The answer pipeline now returns:
+回答 pipeline は次を返します。
 
-- `used_sources`: the subset of retrieved sources actually used to build the answer
-- `answer_level`: `green`, `yellow`, or `red`
+- `used_sources`: 回答に実際に使った retrieval 結果
+- `answer_level`: `green`、`yellow`、`red`
 
-Interpretation:
+意味:
 
-- `green`: evidence is strong enough for a normal answer
-- `yellow`: answer is returned, but with a more cautious tone
-- `red`: evidence is too weak, so the system refuses to answer
+- `green`: 根拠が十分で通常回答できる
+- `yellow`: 回答は返すが、慎重なトーンにする
+- `red`: 根拠が弱いため回答を止める
 
-The `confidence` field is still returned, but it should be treated as a reference score based on the average score of `used_sources`, not as the sole answer/no-answer decision.
+`confidence` も返しますが、これは `used_sources` の平均スコアをベースにした参考値であり、単独で回答可否を決める値ではありません。
 
-## Development Notes
+## 開発メモ
 
-- Docker is used for the local Postgres + pgvector database.
-- The OpenAI API key should be provided through environment variables.
-- This project currently uses `Base.metadata.create_all()` for local development.
-- For production-style evolution, migrations, logging, stricter access control, and fuller evaluation coverage should be added.
+- ローカル DB として Docker 上の Postgres + pgvector を使っています
+- OpenAI API キーは環境変数で渡します
+- 現在はローカル開発向けに `Base.metadata.create_all()` を使っています
+- 本番運用を意識するなら、migration、監査ログ、より厳密な認可、より厚い評価が必要です
 
-## GitHub Publishing Notes
+## GitHub 公開時の注意
 
-- This repository is intended for local development and portfolio demonstration.
-- Do not publish real internal documents, personal information, or company-confidential PDFs.
-- Only include self-authored sample files, clearly fictional documents, or materials you have the right to redistribute.
-- Before publishing, confirm that no API keys, `.env` files, local databases, or transient logs are included in the repository.
+- このリポジトリはローカル開発とポートフォリオ公開を前提にしています
+- 実在の社内文書、個人情報、会社の機密 PDF は公開しないでください
+- 自作サンプル、明確に架空の文書、再配布権のある素材だけを含めてください
+- 公開前に、API キー、`.env`、ローカル DB、ログ、一時ファイルが含まれていないことを確認してください
 
-## What I Would Build Next
+## 次にやるなら
 
-Some next steps are highly company-specific, so this prototype intentionally stops short of fully implementing them:
+次のうち一部は会社依存が強いため、このプロトタイプでは意図的に実装を止めています。
 
-- Authentication-linked access control instead of request-body `user_role`
-- Richer ACL models for department, project, and user-level permissions
-- Audit logging for who searched what and which sources were used
+- リクエストボディの `user_role` ではなく、認証連動のアクセス制御
+- 部署 / プロジェクト / 個人まで含む多段 ACL
+- 誰が何を検索し、どの根拠を使ったかの監査ログ
 
-Other next steps are common RAG quality problems regardless of company context:
+一方で、会社が変わっても共通しやすい次の課題も残っています。
 
-- Better ingestion quality for PDF and document formats beyond plain text
-- Stronger retrieval evaluation on medium-sized and larger document sets
-- A lightweight UI for search, answer review, source inspection, and safe fallback when answers are `red`
+- PDF や他形式文書に対する取り込み品質向上
+- 中規模以上の文書群に対する retrieval 評価の強化
+- `red` のときの導線や根拠確認を含む軽量 UI 改善
 
-## Detailed Guide
+## 詳細ガイド
 
-See [docs/development-guide.md](/C:/Users/estor/RAG/docs/development-guide.md) for:
+[docs/development-guide.md](/C:/Users/estor/RAG/docs/development-guide.md) では次を扱っています。
 
-- startup best practices
-- testing strategy
-- safe edit boundaries
-- coding conventions
-- deployment cautions
-- important files
+- 起動時の注意
+- テスト方針
+- 安全な変更境界
+- コーディング方針
+- デプロイ時の注意
+- 重要ファイル
 
-See [docs/architecture-overview.md](/C:/Users/estor/RAG/docs/architecture-overview.md) for:
+[docs/architecture-overview.md](/C:/Users/estor/RAG/docs/architecture-overview.md) では次を扱っています。
 
-- backend responsibility boundaries
-- retrieval and answer flow
-- versioning and ACL design choices
-- what is intentionally minimal in this prototype
+- backend の責務分割
+- retrieval と回答の流れ
+- 版管理と ACL の設計判断
+- このプロトタイプで意図的に最小に留めている部分
