@@ -1,0 +1,150 @@
+ask_cases:
+  - id: QA-002
+    purpose: green_answer
+    query: "有給申請はどうやる？"
+    expected_answer_level: green
+    expected_enough_information: true
+    expected_used_source_count: 2
+
+  - id: QA-015
+    purpose: red_refusal
+    query: "有給休暇の承認者は誰ですか？"
+    expected_answer_level: red
+    expected_enough_information: false
+    expected_used_source_count: 0
+
+  - id: QA-016
+    purpose: yellow_cautious_answer
+    query: "有給申請の具体的な手順は？"
+    expected_answer_level: yellow
+    expected_enough_information: true
+    expected_used_source_count: 2
+
+  - id: META-006
+    purpose: updated_document_reflected_in_answer
+    query: "育児休業の延長申請はどこから行いますか？"
+    expected_answer_level: green
+    expected_enough_information: true
+    expected_used_source_count: 2
+    expected_used_source_summaries:
+      - "childcare_policy_v2.pdf (v2, 2026-04-11更新)"
+
+  - id: ACL-003
+    purpose: ask_returns_red_when_acl_filters_out_forbidden_documents
+    query: "人事評価資料はどこで確認できますか？"
+    user_role: employee
+    expected_answer_level: red
+    expected_enough_information: false
+    expected_used_source_count: 0
+
+retrieval_cases:
+  - id: QA-002
+    purpose: rewritten_query_keeps_application_chunk_top1
+    query: "有給申請はどうやる？"
+    top_k: 3
+    expected_chunk_indexes:
+      - 0
+      - 1
+      - 2
+    expected_top1_chunk_index: 0
+    expected_top1_source: "hr_policy_v1.pdf"
+
+  - id: QA-003
+    purpose: rerank_promotes_approval_chunk
+    query: "有給休暇は承認が必要ですか？"
+    top_k: 3
+    expected_chunk_indexes:
+      - 1
+      - 0
+      - 2
+    expected_top1_chunk_index: 1
+    expected_top1_source: "hr_policy_v1.pdf"
+
+  - id: META-006
+    purpose: updated_document_is_reflected_in_retrieval
+    query: "育児休業の延長申請はどこから行いますか？"
+    top_k: 3
+    expected_chunk_indexes:
+      - 1
+      - 2
+      - 3
+    expected_top1_chunk_index: 1
+    expected_top1_source: "childcare_policy_v2.pdf"
+
+  - id: META-012
+    purpose: latest_version_is_preferred_within_document_group
+    query: "育児休業の延長申請はどこから行いますか？"
+    top_k: 3
+    expected_chunk_indexes:
+      - 1
+    expected_top1_chunk_index: 1
+    expected_top1_source: "childcare_policy_v2.pdf"
+
+  - id: META-013
+    purpose: version_breaks_tie_when_updated_at_is_same
+    query: "育児休業の延長申請はどこから行いますか？"
+    top_k: 3
+    expected_chunk_indexes:
+      - 1
+    expected_top1_chunk_index: 1
+    expected_top1_source: "childcare_policy_v2.pdf"
+
+  - id: ACL-001
+    purpose: employee_cannot_retrieve_hr_documents
+    query: "人事評価資料はどこで確認できますか？"
+    top_k: 3
+    user_role: employee
+    expected_chunk_indexes:
+      - 1
+    expected_top1_chunk_index: 1
+    expected_top1_source: "public_handbook_v1.pdf"
+
+  - id: ACL-002
+    purpose: hr_can_retrieve_hr_documents
+    query: "人事評価資料はどこで確認できますか？"
+    top_k: 3
+    user_role: hr
+    expected_chunk_indexes:
+      - 0
+      - 1
+    expected_top1_chunk_index: 0
+    expected_top1_source: "hr_review_policy_v1.pdf"
+
+management_cases:
+  - id: META-008
+    purpose: get_single_document
+    method: GET
+    path: "/documents/1"
+    expected_status: 200
+
+  - id: META-009
+    purpose: get_missing_document
+    method: GET
+    path: "/documents/9999"
+    expected_status: 404
+    expected_detail: "Document not found"
+
+  - id: META-010
+    purpose: patch_missing_document
+    method: PATCH
+    path: "/documents/9999"
+    body:
+      version: "v999"
+    expected_status: 404
+    expected_detail: "Document not found"
+
+  - id: META-011
+    purpose: patch_missing_document_active
+    method: PATCH
+    path: "/documents/9999/active"
+    body:
+      is_active: false
+    expected_status: 404
+    expected_detail: "Document not found"
+
+  - id: META-014
+    purpose: delete_missing_document
+    method: DELETE
+    path: "/documents/9999"
+    expected_status: 404
+    expected_detail: "Document not found"

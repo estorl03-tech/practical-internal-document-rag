@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>社内文書検索RAG</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #eef3f7;
+        --bg-soft: #f8fbfd;
+        --panel: rgba(255, 255, 255, 0.96);
+        --panel-strong: rgba(248, 251, 253, 0.98);
+        --field-bg: #e8eef4;
+        --result-bg: rgba(255, 255, 255, 0.98);
+        --line: rgba(78, 96, 118, 0.14);
+        --text: #16202a;
+        --muted: #5f7184;
+        --accent: #0f766e;
+        --accent-deep: #155e75;
+        --accent-soft: rgba(15, 118, 110, 0.12);
+        --warn: #b4692d;
+        --danger: #b5332a;
+        --green: #0f6f5e;
+        --yellow: #9c6914;
+        --red: #b33128;
+        --shadow: 0 18px 48px rgba(59, 44, 31, 0.10);
+        --radius: 24px;
+        --page-top: #f9fcff;
+        --page-bottom: #e9eff5;
+        --page-accent-a: rgba(50, 184, 200, 0.10);
+        --page-accent-b: rgba(15, 118, 110, 0.08);
+        --hero-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(245, 249, 252, 0.96) 100%);
+        --panel-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(246, 250, 253, 0.96) 100%);
+        --control-surface: linear-gradient(180deg, rgba(247, 250, 253, 0.99) 0%, rgba(239, 245, 250, 0.97) 100%);
+        --result-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(248, 251, 254, 0.97) 100%);
+        --upload-surface: linear-gradient(180deg, rgba(243, 248, 252, 0.99) 0%, rgba(234, 241, 247, 0.96) 100%);
+        --legend-green-bg: rgba(15, 111, 94, 0.08);
+        --legend-green-line: rgba(15, 111, 94, 0.16);
+        --legend-yellow-bg: rgba(156, 105, 20, 0.08);
+        --legend-yellow-line: rgba(156, 105, 20, 0.16);
+        --legend-red-bg: rgba(179, 49, 40, 0.08);
+        --legend-red-line: rgba(179, 49, 40, 0.16);
+        --legend-neutral-bg: rgba(21, 94, 117, 0.06);
+        --legend-neutral-line: rgba(21, 94, 117, 0.14);
+        --hint-bg: rgba(21, 94, 117, 0.07);
+        --hint-line: rgba(21, 94, 117, 0.14);
+        --empty-bg: rgba(245, 249, 252, 0.92);
+        --fallback-surface: rgba(255, 244, 242, 0.92);
+        --fallback-line: rgba(185, 35, 24, 0.18);
+        --fallback-text: #7d322d;
+        --badge-green-bg: rgba(11, 107, 87, 0.12);
+        --badge-yellow-bg: rgba(154, 103, 0, 0.12);
+        --badge-red-bg: rgba(185, 35, 24, 0.12);
+        --summary-chip-bg: rgba(15, 118, 110, 0.08);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #161a1f;
+          --bg-soft: #1d232b;
+          --panel: rgba(30, 36, 43, 0.96);
+          --panel-strong: rgba(36, 43, 51, 0.98);
+          --field-bg: #2a313a;
+          --result-bg: rgba(23, 28, 34, 0.96);
+          --line: rgba(226, 232, 240, 0.10);
+          --text: #eef2f7;
+          --muted: #b7c0cc;
+          --accent: #32b8c8;
+          --accent-deep: #5dd6e3;
+          --accent-soft: rgba(50, 184, 200, 0.14);
+          --warn: #d5a55a;
+          --danger: #d86f67;
+          --green: #78ddc5;
+          --yellow: #f0c16b;
+          --red: #f39a92;
+          --shadow: 0 18px 48px rgba(0, 0, 0, 0.24);
+          --page-top: #1b2128;
+          --page-bottom: #12161b;
+          --page-accent-a: rgba(50, 184, 200, 0.10);
+          --page-accent-b: rgba(93, 214, 227, 0.08);
+          --hero-surface: linear-gradient(180deg, rgba(35, 42, 50, 0.98) 0%, rgba(27, 33, 40, 0.95) 100%);
+          --panel-surface: linear-gradient(180deg, rgba(32, 38, 46, 0.98) 0%, rgba(25, 30, 37, 0.95) 100%);
+          --control-surface: linear-gradient(180deg, rgba(34, 41, 49, 0.98) 0%, rgba(27, 33, 40, 0.96) 100%);
+          --result-surface: linear-gradient(180deg, rgba(24, 29, 35, 0.98) 0%, rgba(19, 24, 29, 0.97) 100%);
+          --upload-surface: linear-gradient(180deg, rgba(38, 45, 53, 0.98) 0%, rgba(31, 37, 45, 0.95) 100%);
+          --legend-green-bg: rgba(120, 221, 197, 0.08);
+          --legend-green-line: rgba(120, 221, 197, 0.16);
+          --legend-yellow-bg: rgba(240, 193, 107, 0.08);
+          --legend-yellow-line: rgba(240, 193, 107, 0.16);
+          --legend-red-bg: rgba(243, 154, 146, 0.08);
+          --legend-red-line: rgba(243, 154, 146, 0.16);
+          --legend-neutral-bg: rgba(93, 214, 227, 0.08);
+          --legend-neutral-line: rgba(93, 214, 227, 0.14);
+          --hint-bg: rgba(50, 184, 200, 0.10);
+          --hint-line: rgba(50, 184, 200, 0.16);
+          --empty-bg: rgba(29, 35, 42, 0.88);
+          --fallback-surface: rgba(74, 44, 45, 0.26);
+          --fallback-line: rgba(243, 154, 146, 0.14);
+          --fallback-text: #f0c1bb;
+          --badge-green-bg: rgba(120, 221, 197, 0.14);
+          --badge-yellow-bg: rgba(240, 193, 107, 0.14);
+          --badge-red-bg: rgba(243, 154, 146, 0.14);
+          --summary-chip-bg: rgba(50, 184, 200, 0.14);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, var(--page-accent-a), transparent 28%),
+          radial-gradient(circle at top right, var(--page-accent-b), transparent 24%),
+          linear-gradient(180deg, var(--page-top) 0%, var(--page-bottom) 100%);
+        min-height: 100vh;
+      }
+
+      .page {
+        width: min(1360px, calc(100vw - 120px));
+        margin: 0 auto;
+        padding: 20px 0 18px;
+      }
+
+      .hero {
+        margin-bottom: 16px;
+      }
+
+      .hero-card,
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+
+      .hero-card {
+        padding: 26px 28px;
+        background: var(--hero-surface);
+      }
+
+      .hero-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.5fr) minmax(340px, 0.74fr);
+        gap: 12px;
+        align-items: start;
+      }
+
+      .hero-main {
+        min-width: 0;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+      }
+
+      h1 {
+        margin-top: 4px;
+        font-size: clamp(32px, 4vw, 54px);
+        line-height: 1.02;
+        letter-spacing: -0.04em;
+      }
+
+      .hero-copy {
+        margin-top: 10px;
+        font-size: 19px;
+        line-height: 1.45;
+        font-weight: 600;
+        color: var(--muted);
+        max-width: 58ch;
+      }
+
+      .hero-points {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 22px;
+      }
+
+      .hero-points span {
+        display: inline-flex;
+        align-items: center;
+        padding: 9px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(15, 118, 110, 0.14);
+        background: rgba(255, 255, 255, 0.65);
+        font-size: 14px;
+        color: var(--text);
+      }
+
+      .status-card {
+        padding: 2px 0 0;
+        display: grid;
+        gap: 8px;
+        align-content: start;
+      }
+
+      .status-card h2 {
+        font-size: 20px;
+      }
+
+      .status-card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .legend-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .legend-item {
+        display: grid;
+        gap: 4px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: var(--result-bg);
+        border: 1px solid var(--line);
+        min-height: 78px;
+        align-content: center;
+      }
+
+      .legend-item.green {
+        background: var(--legend-green-bg);
+        border-color: var(--legend-green-line);
+      }
+
+      .legend-item.yellow {
+        background: var(--legend-yellow-bg);
+        border-color: var(--legend-yellow-line);
+      }
+
+      .legend-item.red {
+        background: var(--legend-red-bg);
+        border-color: var(--legend-red-line);
+      }
+
+      .legend-item.neutral {
+        background: var(--legend-neutral-bg);
+        border-color: var(--legend-neutral-line);
+      }
+
+      .legend-item strong {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+      }
+
+      .legend-item span {
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.35;
+      }
+
+      .legend-note {
+        font-size: 13px;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+        gap: 22px;
+      }
+
+      .panel {
+        padding: 24px 28px;
+        background: var(--panel-surface);
+      }
+
+      .control-panel {
+        background: var(--control-surface);
+      }
+
+      .result-panel {
+        background: var(--result-surface);
+      }
+
+      .panel h2 {
+        font-size: 20px;
+        margin-bottom: 14px;
+      }
+
+      .panel-subtitle {
+        margin: -2px 0 18px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .form-stack {
+        display: grid;
+        gap: 16px;
+      }
+
+      label {
+        display: grid;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      textarea,
+      select,
+      input {
+        width: 100%;
+        border-radius: 16px;
+        border: 1px solid rgba(67, 54, 43, 0.16);
+        padding: 14px 16px;
+        font: inherit;
+        color: var(--text);
+        background: var(--field-bg);
+      }
+
+      textarea {
+        min-height: 132px;
+        resize: vertical;
+        line-height: 1.6;
+      }
+
+      .button-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .upload-card {
+        display: grid;
+        gap: 10px;
+        padding: 14px 16px;
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        background: var(--upload-surface);
+      }
+
+      .demo-columns {
+        display: grid;
+        gap: 16px;
+      }
+
+      .demo-column {
+        display: grid;
+        align-content: start;
+        gap: 10px;
+      }
+
+      .demo-column-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 650;
+      }
+
+      .upload-card h3 {
+        font-size: 16px;
+      }
+
+      .upload-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .upload-grid .full {
+        grid-column: 1 / -1;
+      }
+
+      .file-picker {
+        display: grid;
+        gap: 6px;
+      }
+
+      .file-input-hidden {
+        display: none;
+      }
+
+      .file-picker-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 48px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(21, 94, 117, 0.18);
+        background: linear-gradient(135deg, rgba(15, 118, 110, 0.16), rgba(21, 94, 117, 0.14));
+        color: var(--accent-deep);
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+      }
+
+      .file-picker-name {
+        min-height: 16px;
+        font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .upload-status {
+        min-height: 18px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .upload-status.success {
+        color: var(--green);
+      }
+
+      .upload-status.error {
+        color: var(--red);
+      }
+
+      button {
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 120ms ease, opacity 120ms ease, box-shadow 120ms ease;
+      }
+
+      button:hover:not(:disabled) {
+        transform: translateY(-1px);
+      }
+
+      button:disabled {
+        cursor: progress;
+        opacity: 0.65;
+      }
+
+      .primary {
+        background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+        color: white;
+        box-shadow: 0 12px 24px rgba(15, 118, 110, 0.18);
+      }
+
+      .secondary {
+        background: rgba(15, 118, 110, 0.08);
+        color: var(--accent);
+      }
+
+      .ghost {
+        background: rgba(34, 26, 20, 0.05);
+        color: var(--text);
+      }
+
+      .button-row .ghost {
+        margin-left: auto;
+        padding-inline: 0;
+        background: transparent;
+        color: var(--muted);
+        box-shadow: none;
+      }
+
+      .button-row .ghost:hover:not(:disabled) {
+        transform: none;
+        color: var(--text);
+      }
+
+      .demo-hints {
+        margin-top: 8px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: var(--hint-bg);
+        border: 1px solid var(--hint-line);
+      }
+
+      .demo-hints strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .demo-hints ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      .result-shell {
+        display: grid;
+        gap: 18px;
+      }
+
+      .result-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .badge-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .badge.green {
+        background: var(--badge-green-bg);
+        color: var(--green);
+      }
+
+      .badge.yellow {
+        background: var(--badge-yellow-bg);
+        color: var(--yellow);
+      }
+
+      .badge.red {
+        background: var(--badge-red-bg);
+        color: var(--red);
+      }
+
+      .mono {
+        font-family: "Cascadia Code", "Consolas", monospace;
+      }
+
+      .answer-card,
+      .source-card,
+      .log-card {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 22px;
+        background: var(--result-bg);
+      }
+
+      .answer-text {
+        white-space: pre-wrap;
+        line-height: 1.7;
+        font-size: 15px;
+      }
+
+      .summary-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .summary-chip {
+        border-radius: 999px;
+        padding: 8px 12px;
+        background: var(--summary-chip-bg);
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .source-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .source-meta {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .source-content {
+        white-space: pre-wrap;
+        line-height: 1.6;
+      }
+
+      .fallback-box {
+        border-radius: 18px;
+        padding: 16px;
+        background: var(--fallback-surface, rgba(255, 246, 244, 0.92));
+        border: 1px solid var(--fallback-line, rgba(185, 35, 24, 0.18));
+        color: var(--fallback-text, var(--text));
+        margin-top: 16px;
+      }
+
+      .fallback-box strong {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--fallback-text, var(--red));
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .empty {
+        padding: 18px;
+        border: 1px dashed rgba(35, 33, 30, 0.18);
+        border-radius: 18px;
+        color: var(--muted);
+        background: var(--empty-bg);
+      }
+
+      #sourcesContainer {
+        max-height: 320px;
+        overflow: auto;
+        padding-right: 4px;
+      }
+
+      @media (min-width: 981px) {
+        body {
+          overflow: hidden;
+        }
+
+        .page {
+          height: 100vh;
+          width: min(1360px, calc(100vw - 132px));
+          max-width: none;
+          padding: 12px 0 10px;
+          display: grid;
+          grid-template-rows: auto 1fr;
+          gap: 10px;
+        }
+
+        .hero {
+          margin-bottom: 0;
+        }
+
+        .hero-card {
+          padding: 16px 22px;
+        }
+
+        .hero-layout {
+          grid-template-columns: minmax(0, 1.72fr) minmax(360px, 0.78fr);
+          gap: 10px;
+        }
+
+        h1 {
+          margin-top: 2px;
+          font-size: clamp(32px, 3.4vw, 54px);
+        }
+
+        .hero-copy {
+          margin-top: 4px;
+          font-size: 18px;
+          line-height: 1.24;
+          font-weight: 600;
+          max-width: none;
+        }
+
+        .status-card {
+          padding: 0;
+          gap: 6px;
+          align-content: start;
+        }
+
+        .status-card h2 {
+          font-size: 18px;
+          margin-bottom: 0;
+        }
+
+        .legend-grid {
+          gap: 5px;
+        }
+
+        .legend-item {
+          padding: 8px 10px;
+          gap: 3px;
+        }
+
+        .legend-item strong {
+          font-size: 11px;
+        }
+
+        .legend-item span {
+          font-size: 14px;
+        }
+
+        .workspace {
+          min-height: 0;
+          gap: 14px;
+          grid-template-columns: minmax(620px, 1.08fr) minmax(0, 1.26fr);
+        }
+
+        .panel {
+          min-height: 0;
+          overflow: auto;
+          padding: 22px 24px;
+        }
+
+        .panel h2 {
+          margin-bottom: 6px;
+          font-size: 24px;
+        }
+
+        .panel-subtitle {
+          margin: 0 0 8px;
+          font-size: 16px;
+          line-height: 1.4;
+        }
+
+        .form-stack {
+          gap: 10px;
+        }
+
+        label {
+          gap: 8px;
+          font-size: 18px;
+        }
+
+        textarea,
+        select,
+        input {
+          padding: 14px 16px;
+          border-radius: 14px;
+          font-size: 17px;
+        }
+
+        textarea {
+          min-height: 146px;
+        }
+
+        .demo-hints {
+          display: none;
+        }
+
+        .upload-card {
+          gap: 8px;
+          padding: 12px 14px;
+        }
+
+        .demo-column {
+          gap: 8px;
+        }
+
+        .demo-column-title {
+          font-size: 17px;
+        }
+
+        .upload-card h3 {
+          font-size: 17px;
+        }
+
+        .demo-columns {
+          grid-template-columns: minmax(235px, 0.64fr) minmax(0, 1.36fr);
+          align-items: start;
+          margin-bottom: 10px;
+        }
+
+        .upload-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .file-picker-button {
+          min-height: 44px;
+          font-size: 15px;
+        }
+
+        .upload-grid .full {
+          grid-column: auto;
+        }
+
+        .upload-status {
+          font-size: 13px;
+        }
+
+        .result-shell {
+          gap: 10px;
+          grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.75fr);
+          align-content: start;
+        }
+
+        .result-header {
+          grid-column: 1 / -1;
+        }
+
+        .answer-card,
+        .source-card,
+        .log-card {
+          padding: 18px;
+          border-radius: 16px;
+        }
+
+        .answer-text,
+        .source-content {
+          font-size: 17px;
+          line-height: 1.55;
+        }
+
+        .answer-main {
+          grid-column: 1;
+        }
+
+        .summary-card {
+          grid-column: 2;
+        }
+
+        .sources-card {
+          grid-column: 1 / -1;
+        }
+
+        #sourcesContainer {
+          max-height: 260px;
+        }
+      }
+
+      @media (max-width: 980px) {
+        .hero-layout,
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <section class="hero">
+        <div class="hero-card">
+          <div class="hero-layout">
+            <div class="hero-main">
+              <h1>社内文書検索RAG</h1>
+              <p class="hero-copy">
+                根拠表示・最新版優先・権限制御を備えた実務向けプロトタイプ
+              </p>
+            </div>
+            <aside class="status-card">
+              <h2>判定の見方</h2>
+              <div class="legend-grid">
+                <div class="legend-item green">
+                  <strong>green</strong>
+                  <span>通常回答</span>
+                </div>
+                <div class="legend-item yellow">
+                  <strong>yellow</strong>
+                  <span>慎重に回答</span>
+                </div>
+                <div class="legend-item red">
+                  <strong>red</strong>
+                  <span>回答を止める</span>
+                </div>
+                <div class="legend-item neutral">
+                  <strong>信頼度</strong>
+                  <span>根拠の強さの目安</span>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <div class="panel control-panel">
+          <h2>試してみる</h2>
+          <p class="panel-subtitle">
+            一般社員と人事を切り替えて、結果の違いを見てください。
+          </p>
+
+          <div class="demo-columns">
+            <div class="demo-column">
+              <h3 class="demo-column-title">PDFを取り込む</h3>
+              <div class="upload-card">
+                <div class="upload-grid">
+                <label class="full">
+                  <div class="file-picker">
+                    <input
+                      id="pdfFileInput"
+                        class="file-input-hidden"
+                        type="file"
+                        accept="application/pdf,.pdf"
+                      />
+                      <button class="file-picker-button" id="pickPdfButton" type="button">
+                        ファイルを選択
+                      </button>
+                      <div class="file-picker-name" id="selectedPdfName">未選択</div>
+                    </div>
+                  </label>
+
+                  <label>
+                    文書タイトル
+                    <input id="uploadTitleInput" type="text" value="" />
+                  </label>
+
+                  <label>
+                    公開範囲
+                    <select id="uploadAccessInput">
+                      <option value="public" selected>公開</option>
+                      <option value="hr">人事限定</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="button-row">
+                  <button class="secondary" id="uploadButton" type="button">登録</button>
+                </div>
+
+                <div class="upload-status" id="uploadStatus">まだ登録していません。</div>
+              </div>
+            </div>
+
+            <div class="demo-column">
+              <h3 class="demo-column-title">質問</h3>
+              <div class="form-stack">
+                <label>
+                  <textarea id="queryInput"></textarea>
+                </label>
+
+                <label>
+                  閲覧ロール
+                  <select id="roleSelect">
+                    <option value="employee" selected>一般社員</option>
+                    <option value="hr">人事</option>
+                  </select>
+                </label>
+
+                <label>
+                  取得件数
+                  <input id="topKInput" type="number" min="1" max="10" value="3" />
+                </label>
+
+                <div class="button-row">
+                  <button class="primary" id="askButton" type="button">回答を見る</button>
+                  <button class="secondary" id="searchButton" type="button">検索結果を見る</button>
+                  <button class="ghost" id="resetButton" type="button">初期状態に戻す</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="demo-hints">
+            <strong>おすすめの見方</strong>
+            <ul>
+              <li>`一般社員` で `人事評価資料はどこで確認できますか？` を実行すると `red` になります。</li>
+              <li>`人事` で同じ質問を実行すると、人事向け文書を使って回答できます。</li>
+              <li>`検索結果を見る` で候補だけを確認できます。</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="panel result-panel">
+          <div class="result-shell">
+            <div class="result-header">
+              <div>
+                <h2>結果</h2>
+                <p class="panel-subtitle">回答と根拠をまとめて確認できます。</p>
+              </div>
+              <div class="badge-row" id="statusBadges">
+                <span class="badge" id="modeBadge">待機中</span>
+              </div>
+            </div>
+
+            <div class="answer-card answer-main">
+              <h3>回答</h3>
+              <p class="answer-text" id="answerText">まだ実行していません。「回答を見る」か「検索結果を見る」を押してください。</p>
+              <div class="fallback-box" id="fallbackBox" hidden>
+                <strong>回答を止めた理由</strong>
+                <span id="fallbackText">
+                  見えている文書だけでは、はっきり答えられるだけの根拠が足りませんでした。担当部署や正式な窓口に確認してください。
+                </span>
+              </div>
+            </div>
+
+            <div class="answer-card summary-card">
+              <h3>回答に使った文書</h3>
+              <div class="summary-list" id="summaryList">
+                <span class="muted">実行後に表示されます。</span>
+              </div>
+            </div>
+
+            <div class="log-card sources-card">
+              <h3>検索で見つかった候補</h3>
+              <div id="sourcesContainer" class="source-list">
+                <div class="empty">実行後に検索候補を表示します。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const queryInput = document.getElementById("queryInput");
+      const roleSelect = document.getElementById("roleSelect");
+      const topKInput = document.getElementById("topKInput");
+      const pdfFileInput = document.getElementById("pdfFileInput");
+      const pickPdfButton = document.getElementById("pickPdfButton");
+      const selectedPdfName = document.getElementById("selectedPdfName");
+      const uploadTitleInput = document.getElementById("uploadTitleInput");
+      const uploadAccessInput = document.getElementById("uploadAccessInput");
+      const uploadButton = document.getElementById("uploadButton");
+      const uploadStatus = document.getElementById("uploadStatus");
+      const askButton = document.getElementById("askButton");
+      const searchButton = document.getElementById("searchButton");
+      const resetButton = document.getElementById("resetButton");
+      const answerText = document.getElementById("answerText");
+      const summaryList = document.getElementById("summaryList");
+      const sourcesContainer = document.getElementById("sourcesContainer");
+      const statusBadges = document.getElementById("statusBadges");
+      const modeBadge = document.getElementById("modeBadge");
+      const fallbackBox = document.getElementById("fallbackBox");
+      const fallbackText = document.getElementById("fallbackText");
+
+      function roleLabel(role) {
+        if (role === "hr") {
+          return "人事";
+        }
+        return "一般社員";
+      }
+
+      function currentPayload() {
+        return {
+          query: queryInput.value.trim(),
+          top_k: Number(topKInput.value) || 3,
+          user_role: roleSelect.value,
+        };
+      }
+
+      function fileStem(fileName) {
+        return (fileName || "").replace(/\.[^.]+$/, "").trim();
+      }
+
+      function inferVersion(title, fileName) {
+        const sourceText = `${title} ${fileName}`;
+        const japaneseEdition = sourceText.match(/第\s*(\d+)\s*版/i);
+        if (japaneseEdition) {
+          return `v${japaneseEdition[1]}`;
+        }
+
+        const versionMatch = sourceText.match(/(?:^|[\s_\-])(v|ver)\s*(\d+)(?:$|[\s_\-])/i);
+        if (versionMatch) {
+          return `v${versionMatch[2]}`;
+        }
+
+        return "v1";
+      }
+
+      function inferDocumentGroup(title, fileName) {
+        const base = (title || fileStem(fileName) || "uploaded_pdf").trim();
+        const withoutEdition = base
+          .replace(/第\s*\d+\s*版/gi, "")
+          .replace(/(?:^|[\s_\-])(v|ver)\s*\d+(?:$|[\s_\-])/gi, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        return withoutEdition || "uploaded_pdf";
+      }
+
+      function setBusy(isBusy) {
+        askButton.disabled = isBusy;
+        searchButton.disabled = isBusy;
+        resetButton.disabled = isBusy;
+      }
+
+      function setUploadBusy(isBusy) {
+        uploadButton.disabled = isBusy;
+      }
+
+      function clearBadges() {
+        statusBadges.innerHTML = "";
+      }
+
+      function addBadge(label, tone = "") {
+        const badge = document.createElement("span");
+        badge.className = tone ? `badge ${tone}` : "badge";
+        badge.textContent = label;
+        statusBadges.appendChild(badge);
+      }
+
+      function formatSourceMeta(source) {
+        return [
+          `文書: ${source.source}`,
+          `chunk: ${source.chunk_index}`,
+          `版: ${source.version}`,
+          `系列: ${source.document_group}`,
+          `順位: ${source.rerank_position ?? "-"}`,
+        ];
+      }
+
+      function renderSources(sources) {
+        if (!sources || sources.length === 0) {
+          sourcesContainer.innerHTML =
+            '<div class="empty">表示できる根拠がありませんでした。</div>';
+          return;
+        }
+
+        sourcesContainer.innerHTML = "";
+
+        for (const source of sources) {
+          const card = document.createElement("article");
+          card.className = "source-card";
+
+          const meta = document.createElement("div");
+          meta.className = "source-meta";
+          for (const item of formatSourceMeta(source)) {
+            const span = document.createElement("span");
+            span.textContent = item;
+            meta.appendChild(span);
+          }
+
+          const content = document.createElement("div");
+          content.className = "source-content";
+          content.textContent = source.content;
+
+          card.appendChild(meta);
+          card.appendChild(content);
+          sourcesContainer.appendChild(card);
+        }
+      }
+
+      function renderSummaries(summaries) {
+        summaryList.innerHTML = "";
+        if (!summaries || summaries.length === 0) {
+          const span = document.createElement("span");
+          span.className = "muted";
+          span.textContent = "回答に使った文書要約はありません。";
+          summaryList.appendChild(span);
+          return;
+        }
+
+        for (const summary of summaries) {
+          const chip = document.createElement("span");
+          chip.className = "summary-chip";
+          chip.textContent = summary;
+          summaryList.appendChild(chip);
+        }
+      }
+
+      function renderFallback(show, text) {
+        fallbackBox.hidden = !show;
+        if (show) {
+          fallbackText.textContent = text;
+        }
+      }
+
+      async function callApi(path, payload) {
+        const response = await fetch(path, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const body = await response.text();
+          throw new Error(body || `HTTP ${response.status}`);
+        }
+
+        return response.json();
+      }
+
+      async function handleUpload() {
+        const file = pdfFileInput.files?.[0];
+        if (!file) {
+          uploadStatus.className = "upload-status error";
+          uploadStatus.textContent = "PDFファイルを選んでください。";
+          return;
+        }
+
+        setUploadBusy(true);
+        uploadStatus.className = "upload-status";
+        uploadStatus.textContent = "PDFを登録しています...";
+
+        const formData = new FormData();
+        formData.append("file", file);
+        const inferredTitle = uploadTitleInput.value.trim() || fileStem(file.name);
+        const inferredVersion = inferVersion(inferredTitle, file.name);
+        const inferredGroup = inferDocumentGroup(inferredTitle, file.name);
+
+        formData.append("title", inferredTitle);
+        formData.append("version", inferredVersion);
+        formData.append("is_active", "true");
+        formData.append("document_group", inferredGroup);
+        formData.append("access_level", uploadAccessInput.value);
+
+        try {
+          const response = await fetch("/documents/upload/pdf", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const body = await response.text();
+            throw new Error(body || `HTTP ${response.status}`);
+          }
+
+          const result = await response.json();
+          uploadStatus.className = "upload-status success";
+          uploadStatus.textContent =
+            `登録しました: ${result.title} / ${result.version} / ${result.document_group}`;
+        } catch (error) {
+          uploadStatus.className = "upload-status error";
+          uploadStatus.textContent = `登録に失敗しました: ${error.message}`;
+        } finally {
+          setUploadBusy(false);
+        }
+      }
+
+      async function handleSearch() {
+        const payload = currentPayload();
+        setBusy(true);
+        clearBadges();
+        addBadge("検索結果");
+        answerText.textContent = "検索候補を取得しています...";
+        renderSummaries([]);
+        renderFallback(false, "");
+
+        try {
+          const sources = await callApi("/search", payload);
+          answerText.textContent =
+            "検索で上位に来た候補だけを表示しています。";
+          renderSources(sources);
+          addBadge(`閲覧者: ${roleLabel(payload.user_role)}`);
+          addBadge(`候補: ${sources.length}件`);
+        } catch (error) {
+          answerText.textContent = `検索に失敗しました: ${error.message}`;
+          renderSources([]);
+          renderFallback(true, "API 呼び出しに失敗しました。サーバー起動状態と API キーを確認してください。");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function handleAsk() {
+        const payload = currentPayload();
+        setBusy(true);
+        clearBadges();
+        addBadge("回答");
+        answerText.textContent = "回答を生成しています...";
+        renderFallback(false, "");
+
+        try {
+          const result = await callApi("/ask", payload);
+          clearBadges();
+          addBadge("回答");
+          addBadge(`閲覧者: ${roleLabel(payload.user_role)}`);
+          addBadge(`信頼度: ${result.confidence.toFixed(2)}`);
+          addBadge(result.answer_level.toUpperCase(), result.answer_level);
+
+          answerText.textContent = result.answer;
+          renderSummaries(result.used_source_summaries);
+          renderSources(result.sources);
+
+          if (result.answer_level === "red") {
+            renderFallback(
+              true,
+              "見えている文書だけでは、はっきり答えられるだけの根拠が見つかりませんでした。担当部署や正式な窓口に確認してください。"
+            );
+          }
+        } catch (error) {
+          answerText.textContent = `回答の生成に失敗しました: ${error.message}`;
+          renderSummaries([]);
+          renderSources([]);
+          renderFallback(true, "API 呼び出しに失敗しました。サーバー起動状態と API キーを確認してください。");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function resetDemo() {
+        queryInput.value = "";
+        roleSelect.value = "employee";
+        topKInput.value = "3";
+        clearBadges();
+        addBadge("待機中");
+        answerText.textContent =
+          "まだ実行していません。「回答を見る」か「検索結果を見る」を押してください。";
+        renderSummaries([]);
+        renderSources([]);
+        renderFallback(false, "");
+      }
+
+      askButton.addEventListener("click", handleAsk);
+      searchButton.addEventListener("click", handleSearch);
+      resetButton.addEventListener("click", resetDemo);
+      uploadButton.addEventListener("click", handleUpload);
+      pickPdfButton.addEventListener("click", () => {
+        pdfFileInput.click();
+      });
+      pdfFileInput.addEventListener("change", () => {
+        const file = pdfFileInput.files?.[0];
+        if (!file) {
+          selectedPdfName.textContent = "未選択";
+          return;
+        }
+
+        selectedPdfName.textContent = file.name;
+
+        if (!uploadTitleInput.value.trim()) {
+          uploadTitleInput.value = fileStem(file.name);
+        }
+      });
+
+      resetDemo();
+    </script>
+  </body>
+</html>
