@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
 from fastapi.responses import FileResponse
@@ -10,6 +11,7 @@ from app.database import SessionLocal, enable_pgvector, engine
 from app.embeddings import EMBEDDING_MODEL, embed_text
 from app.models import Base, Document, DocumentChunk
 from app.schemas import (
+    AccessLevel,
     AskRequest,
     AskResponse,
     DocumentActiveUpdate,
@@ -23,6 +25,9 @@ from app.schemas import (
 from app.services.ask_service import answer_question
 from app.services.document_ingest_service import extract_text_from_pdf_bytes
 from app.services.search_service import retrieve_chunks
+
+MAX_PDF_UPLOAD_BYTES = 5 * 1024 * 1024
+ALLOWED_PDF_MEDIA_TYPES = {"application/pdf"}
 
 
 @asynccontextmanager
@@ -93,6 +98,13 @@ def save_document(
     db.commit()
     db.refresh(db_document)
     return db_document
+
+
+def sanitize_source_filename(filename: str | None) -> str:
+    if not filename:
+        return "uploaded.pdf"
+    safe_name = Path(filename).name
+    return safe_name or "uploaded.pdf"
 
 
 @app.get("/health")
@@ -280,18 +292,24 @@ def ask_question(request: AskRequest) -> AskResponse:
 @app.post("/documents/upload/pdf", response_model=DocumentRead)
 def upload_pdf_document(
     file: UploadFile = File(...),
-    title: str = Form(...),
-    version: str = Form("v1"),
+    title: str = Form(..., min_length=1, max_length=200),
+    version: str = Form("v1", min_length=1, max_length=20),
     is_active: bool = Form(True),
-    document_group: str = Form(...),
-    access_level: str = Form("public"),
+    document_group: str = Form(..., min_length=1, max_length=100),
+    access_level: AccessLevel = Form("public"),
 ) -> Document:
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="PDF file is required")
+    if file.content_type and file.content_type not in ALLOWED_PDF_MEDIA_TYPES:
+        raise HTTPException(status_code=400, detail="Unsupported PDF media type")
 
     data = file.file.read()
     if not data:
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
+    if len(data) > MAX_PDF_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Uploaded file is too large")
+    if not data.startswith(b"%PDF-"):
+        raise HTTPException(status_code=400, detail="Invalid PDF file")
 
     content = extract_text_from_pdf_bytes(data)
     if not content.strip():
@@ -305,7 +323,7 @@ def upload_pdf_document(
         return save_document(
             db,
             title=title,
-            source=file.filename,
+            source=sanitize_source_filename(file.filename),
             content=content,
             version=version,
             is_active=is_active,

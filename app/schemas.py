@@ -1,19 +1,27 @@
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
+
+AccessLevel = Literal["public", "hr"]
+UserRole = Literal["employee", "hr"]
 
 
-class DocumentCreate(BaseModel):
-    title: str
-    source: str
-    content: str
-    version: str = "v1"
+class StrictBaseModel(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class DocumentCreate(StrictBaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    source: str = Field(min_length=1, max_length=255)
+    content: str = Field(min_length=1, max_length=20000)
+    version: str = Field(default="v1", min_length=1, max_length=20)
     is_active: bool = True
-    document_group: str
-    access_level: str = "public"
+    document_group: str = Field(min_length=1, max_length=100)
+    access_level: AccessLevel = "public"
 
 
-class DocumentRead(BaseModel):
+class DocumentRead(StrictBaseModel):
     id: int
     title: str
     source: str
@@ -23,26 +31,26 @@ class DocumentRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     document_group: str
-    access_level: str
+    access_level: AccessLevel
 
     model_config = {"from_attributes": True}
 
 
-class DocumentActiveUpdate(BaseModel):
+class DocumentActiveUpdate(StrictBaseModel):
     is_active: bool
 
 
-class DocumentUpdate(BaseModel):
-    title: str | None = None
-    source: str | None = None
-    content: str | None = None
-    version: str | None = None
+class DocumentUpdate(StrictBaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    source: str | None = Field(default=None, min_length=1, max_length=255)
+    content: str | None = Field(default=None, min_length=1, max_length=20000)
+    version: str | None = Field(default=None, min_length=1, max_length=20)
     is_active: bool | None = None
-    document_group: str | None = None
-    access_level: str | None = None
+    document_group: str | None = Field(default=None, min_length=1, max_length=100)
+    access_level: AccessLevel | None = None
 
 
-class DocumentChunkRead(BaseModel):
+class DocumentChunkRead(StrictBaseModel):
     id: int
     document_id: int
     chunk_index: int
@@ -52,10 +60,10 @@ class DocumentChunkRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class SearchRequest(BaseModel):
-    query: str
-    top_k: int = 3
-    user_role: str = "employee"
+class SearchRequest(StrictBaseModel):
+    query: str = Field(min_length=1, max_length=500)
+    top_k: int = Field(default=3, ge=1, le=10)
+    user_role: UserRole = "employee"
 
 
 class SearchResult(BaseModel):
@@ -71,10 +79,10 @@ class SearchResult(BaseModel):
     document_group: str
 
 
-class AskRequest(BaseModel):
-    query: str
-    top_k: int = 3
-    user_role: str = "employee"
+class AskRequest(StrictBaseModel):
+    query: str = Field(min_length=1, max_length=500)
+    top_k: int = Field(default=3, ge=1, le=10)
+    user_role: UserRole = "employee"
 
 
 class AskResponse(BaseModel):

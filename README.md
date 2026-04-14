@@ -54,7 +54,7 @@
 ## 現在の到達点
 
 - **Backend**  
-  retrieval、回答生成、文書管理、active / inactive 制御、最新版優先、最小 ACL、PDF upload、delete API まで実装済みです。
+  retrieval、回答生成、文書管理、active / inactive 制御、最新版優先、最小 ACL、PDF upload、delete API まで実装済みです。加えて、サーバー側バリデーション、`user_role` / `access_level` の許可値制限、PDF upload のサイズ・形式チェックも入れています。
 - **UI**  
   `/demo` で、検索、回答確認、ACL の差、PDF 取り込み、`green / yellow / red` の挙動を 1 画面で確認できます。
 - **Quality**  
@@ -182,6 +182,13 @@ uv run uvicorn app.main:app --reload
 - `GET /documents/{document_id}/chunks`
 - `POST /documents/upload/pdf`
 
+入力値の扱いについて:
+
+- クライアント側 UI の制御だけに依存せず、主要入力はサーバー側でも検証しています
+- `user_role` と `access_level` は最小 ACL の許可値だけを受け付けます
+- `top_k` には上限を設けています
+- PDF upload にはサイズ上限、media type チェック、PDF シグネチャ確認を入れています
+
 ### Retrieval
 
 - `POST /search`
@@ -273,6 +280,7 @@ PATCH /documents/1
 - ローカル DB として Docker 上の Postgres + pgvector を使っています
 - OpenAI API キーは環境変数で渡します
 - 現在はローカル開発向けに `Base.metadata.create_all()` を使っています
+- 入力はすべて信頼せず、最低限のサーバー側バリデーションと upload 防御を先に入れています
 - 本番運用を意識するなら、migration、監査ログ、より厳密な認可、より厚い評価が必要です
 
 ## GitHub 公開時の注意

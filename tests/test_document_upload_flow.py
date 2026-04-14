@@ -137,3 +137,78 @@ def test_upload_pdf_document_returns_400_when_text_extraction_fails(monkeypatch)
 
     assert response.status_code == 400
     assert response.json() == {"detail": "Could not extract text from PDF"}
+
+
+def test_upload_pdf_document_returns_400_for_unsupported_content_type(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(main, "enable_pgvector", lambda: None)
+    monkeypatch.setattr(main.Base.metadata, "create_all", lambda bind: None)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/documents/upload/pdf",
+            files={"file": ("rules.pdf", b"%PDF-1.4 fake pdf bytes", "text/plain")},
+            data={
+                "title": "就業規則",
+                "document_group": "work_rules",
+            },
+        )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Unsupported PDF media type"}
+
+
+def test_upload_pdf_document_returns_400_for_invalid_pdf_signature(monkeypatch) -> None:
+    monkeypatch.setattr(main, "enable_pgvector", lambda: None)
+    monkeypatch.setattr(main.Base.metadata, "create_all", lambda bind: None)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/documents/upload/pdf",
+            files={"file": ("rules.pdf", b"not actually a pdf", "application/pdf")},
+            data={
+                "title": "就業規則",
+                "document_group": "work_rules",
+            },
+        )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Invalid PDF file"}
+
+
+def test_upload_pdf_document_returns_413_for_oversized_file(monkeypatch) -> None:
+    monkeypatch.setattr(main, "enable_pgvector", lambda: None)
+    monkeypatch.setattr(main.Base.metadata, "create_all", lambda bind: None)
+    monkeypatch.setattr(main, "MAX_PDF_UPLOAD_BYTES", 8)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/documents/upload/pdf",
+            files={"file": ("rules.pdf", b"%PDF-1234567890", "application/pdf")},
+            data={
+                "title": "就業規則",
+                "document_group": "work_rules",
+            },
+        )
+
+    assert response.status_code == 413
+    assert response.json() == {"detail": "Uploaded file is too large"}
+
+
+def test_upload_pdf_document_rejects_invalid_access_level(monkeypatch) -> None:
+    monkeypatch.setattr(main, "enable_pgvector", lambda: None)
+    monkeypatch.setattr(main.Base.metadata, "create_all", lambda bind: None)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/documents/upload/pdf",
+            files={"file": ("rules.pdf", b"%PDF-1.4 fake pdf bytes", "application/pdf")},
+            data={
+                "title": "就業規則",
+                "document_group": "work_rules",
+                "access_level": "finance",
+            },
+        )
+
+    assert response.status_code == 422

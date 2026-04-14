@@ -187,3 +187,56 @@ def test_get_document_chunks_returns_empty_list_for_missing_document(monkeypatch
 
     assert chunks_response.status_code == 200
     assert chunks_response.json() == []
+
+
+def test_create_document_rejects_invalid_access_level(monkeypatch) -> None:
+    monkeypatch.setattr(main, "enable_pgvector", lambda: None)
+    monkeypatch.setattr(main.Base.metadata, "create_all", lambda bind: None)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/documents",
+            json={
+                "title": "就業規則",
+                "source": "rules.pdf",
+                "content": "本文です。",
+                "document_group": "work_rules",
+                "access_level": "finance",
+            },
+        )
+
+    assert response.status_code == 422
+
+
+def test_search_rejects_invalid_user_role(monkeypatch) -> None:
+    monkeypatch.setattr(main, "enable_pgvector", lambda: None)
+    monkeypatch.setattr(main.Base.metadata, "create_all", lambda bind: None)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/search",
+            json={
+                "query": "就業規則",
+                "top_k": 3,
+                "user_role": "finance",
+            },
+        )
+
+    assert response.status_code == 422
+
+
+def test_ask_rejects_top_k_over_limit(monkeypatch) -> None:
+    monkeypatch.setattr(main, "enable_pgvector", lambda: None)
+    monkeypatch.setattr(main.Base.metadata, "create_all", lambda bind: None)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/ask",
+            json={
+                "query": "就業規則",
+                "top_k": 99,
+                "user_role": "employee",
+            },
+        )
+
+    assert response.status_code == 422
