@@ -43,7 +43,7 @@
 - 権限外文書が retrieval や回答に混ざる
 - 会話ベースの手動 QA に依存して再現できない
 
-まだ本番レベルでは未解決の課題:
+本番レベルではまだ未解決の課題:
 
 - 本物の認証と ID 連動の認可
 - チーム / プロジェクト / 個人レベルまで含む多段 ACL
@@ -74,21 +74,6 @@
    同じ質問でも、人事ロールなら人事向け文書を使って回答できます。
 3. `PDF upload -> yellow`  
    新しくアップロードした PDF をすぐ検索対象にしつつ、根拠が十分でなければ慎重に回答します。
-
-ポートフォリオで載せるスクリーンショット例:
-
-- `一般社員` が `人事評価資料はどこで確認できますか？` と質問
-  - `red` による安全停止
-  - 権限外文書が混ざらないこと
-  - fallback 挙動
-- `人事` が同じ質問
-  - ACL ベースの retrieval
-  - 根拠付き回答
-  - `used_source_summaries`
-- PDF upload 後に `テレワークの申請はどこから行いますか？`
-  - 取り込み
-  - upload 後の retrieval
-  - `yellow` の慎重回答
 
 ### スクリーンショット: `一般社員 -> red`
 
@@ -182,12 +167,15 @@ uv run uvicorn app.main:app --reload
 - `GET /documents/{document_id}/chunks`
 - `POST /documents/upload/pdf`
 
-入力値の扱いについて:
+### 入力防御の現在地
 
 - クライアント側 UI の制御だけに依存せず、主要入力はサーバー側でも検証しています
-- `user_role` と `access_level` は最小 ACL の許可値だけを受け付けます
-- `top_k` には上限を設けています
-- PDF upload にはサイズ上限、media type チェック、PDF シグネチャ確認を入れています
+- `user_role` は `employee / hr`、`access_level` は `public / hr` の許可値だけを受け付けます
+- `top_k` は `1..10` に制限しています
+- `title`、`source`、`content`、`version`、`document_group`、`query` には最低限の長さ制限を入れています
+- PDF upload にはサイズ上限、media type チェック、PDF シグネチャ確認、ファイル名のサニタイズを入れています
+
+ただし、これは本番レベルの認証・認可ではありません。公開運用では、リクエストボディの `user_role` ではなく、認証済みユーザー情報から権限を決める必要があります。
 
 ### Retrieval
 
@@ -306,7 +294,7 @@ PATCH /documents/1
 
 ## 詳細ガイド
 
-[docs/development-guide.md](/C:/Users/estor/RAG/docs/development-guide.md) では次を扱っています。
+[docs/development-guide.md](docs/development-guide.md) では次を扱っています。
 
 - 起動時の注意
 - テスト方針
@@ -315,7 +303,7 @@ PATCH /documents/1
 - デプロイ時の注意
 - 重要ファイル
 
-[docs/architecture-overview.md](/C:/Users/estor/RAG/docs/architecture-overview.md) では次を扱っています。
+[docs/architecture-overview.md](docs/architecture-overview.md) では次を扱っています。
 
 - backend の責務分割
 - retrieval と回答の流れ
